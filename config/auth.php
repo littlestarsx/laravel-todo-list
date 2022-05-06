@@ -14,8 +14,7 @@ return [
     */
 
     'defaults' => [
-//        'guard' => 'web',//auth
-        'guard' => 'api',//jwt
+        'guard' => 'web',//默认web session
         'passwords' => 'users',
     ],
 
