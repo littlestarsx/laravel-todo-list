@@ -13,8 +13,14 @@ class TodoService
     public function index($where, $field, $page, $pageSize)
     {
         $taskModel = new TaskModel();
+        $where['where'][] = ['is_delete', '=', TaskModel::IS_DELETE_0];
         $count = $taskModel->getCountByCondition($where);
         $list = $taskModel->getListByCondition($where, $field, $page, $pageSize);
+        if (!empty($list)) {
+            array_walk($list, function($value, $key) use(&$list){
+                $list[$key]['complete_time'] = is_null($value['complete_time']) ? '' : $value['complete_time'];
+            });
+        }
         $result = [
             'count' => $count,
             'list' => $list
@@ -77,6 +83,9 @@ class TodoService
         $data = [
             'is_complete' => $param['is_complete'],
         ];
+        if ($param['is_complete'] == TaskModel::IS_COMPLETE_1) {
+            $data['complete_time'] = date('Y-m-d H:i:s');
+        }
         $taskModel = new TaskModel();
         $updateResult = $taskModel->updateByCondition($where, $data);
         if (!$updateResult) {
