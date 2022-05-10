@@ -19,16 +19,26 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 Route::group([
-
     'middleware' => 'api',
     'namespace' => 'App\Http\Controllers',
-    'prefix' => 'auth'
-
 ], function ($router) {
-
-    Route::post('login', 'AuthController@login');
-    Route::post('logout', 'AuthController@logout');
-    Route::post('refresh', 'AuthController@refresh');
-    Route::post('me', 'AuthController@me');
-
+    //auth
+    Route::group(['prefix' => 'auth'], function ($router) {
+        Route::post('login', 'AuthController@login');
+        Route::post('logout', 'AuthController@logout');
+        Route::post('refresh', 'AuthController@refresh');
+        Route::post('me', 'AuthController@me');
+    });
+    //待办
+    Route::group(['prefix' => 'todo'], function ($router) {
+        Route::get('index', 'ToDoController@index');
+        Route::post('store', 'ToDoController@store');
+        Route::post('update', 'ToDoController@update');
+        Route::post('complete', 'ToDoController@changeComplete');
+        Route::post('delete', 'ToDoController@delete');
+    });
+    //other
+    Route::group(['prefix' => 'other'], function ($router) {
+        Route::get('get_cookie', 'OtherController@getCookie');
+    });
 });
