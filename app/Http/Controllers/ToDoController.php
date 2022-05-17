@@ -33,11 +33,44 @@ class ToDoController extends Controller
             if ($request->has('is_complete') && (in_array($request->input('is_complete'), [TaskModel::IS_COMPLETE_0, TaskModel::IS_COMPLETE_1]))) {
                 $where['where'][] = ['is_complete', '=', $request->input('is_complete')];
             }
-            $field = ['task_name', 'is_complete', 'complete_time'];
+            $field = ['id', 'task_name', 'is_complete', 'complete_time'];
             $page = $request->has('page') ? $request->input('page') : 1;
             $pageSize = $request->has('page_size') ? $request->input('page_size') : 10;
 
             $result['data'] = $todoService->index($where, $field, $page, $pageSize);
+            return response()->json($result);
+        } catch (\Exception $error) {
+            $result['code'] = -1;
+            $result['msg'] = $error->getMessage();
+            return response()->json($result);
+        }
+    }
+
+    /**
+     * 详情
+     * @param Request $request
+     * @param TodoService $todoService
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function show(Request $request, TodoService $todoService)
+    {
+        $result = [
+            'code' => 200,
+            'msg' => 'success',
+            'data' => []
+        ];
+        try {
+            $rules = [
+                'id' => 'required',
+            ];
+            $validator = Validator::make($request->all(), $rules);
+            if ($validator->fails()) {
+                $result['code'] = -1;
+                $result['msg'] = $validator->errors()->first();
+                return response()->json($result);
+            }
+            $param = $validator->validated();
+            $result['data'] = $todoService->show($param);
             return response()->json($result);
         } catch (\Exception $error) {
             $result['code'] = -1;

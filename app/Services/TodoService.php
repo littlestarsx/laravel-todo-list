@@ -8,14 +8,19 @@ class TodoService
 {
     /**
      * 列表
-     * @param $param
+     * @param $where
+     * @param $field
+     * @param int $page
+     * @param int $pageSize
+     * @param string $order
+     * @return array
      */
-    public function index($where, $field, $page, $pageSize)
+    public function index($where, $field, $page = 1, $pageSize = 10, $order = 'id desc')
     {
         $taskModel = new TaskModel();
         $where['where'][] = ['is_delete', '=', TaskModel::IS_DELETE_0];
         $count = $taskModel->getCountByCondition($where);
-        $list = $taskModel->getListByCondition($where, $field, $page, $pageSize);
+        $list = $taskModel->getListByCondition($where, $field, $page, $pageSize, $order);
         if (!empty($list)) {
             array_walk($list, function($value, $key) use(&$list){
                 $list[$key]['complete_time'] = is_null($value['complete_time']) ? '' : $value['complete_time'];
@@ -25,6 +30,24 @@ class TodoService
             'count' => $count,
             'list' => $list
         ];
+        return $result;
+    }
+
+    /**
+     * 详情
+     * @param $param
+     * @return array
+     */
+    public function show($param)
+    {
+        $taskModel = new TaskModel();
+        $where['where'][] = ['id', '=', $param['id']];
+        $where['where'][] = ['is_delete', '=', TaskModel::IS_DELETE_0];
+        $field = ['id', 'task_name', 'is_complete', 'complete_time'];
+        $result = $taskModel->getInfoByCondition($where, $field);
+        if (!empty($result)) {
+            $result['complete_time'] = is_null($result['complete_time']) ? '' : $result['complete_time'];
+        }
         return $result;
     }
 

@@ -32,6 +32,7 @@ Route::group([
     //待办
     Route::group(['prefix' => 'todo'], function ($router) {
         Route::get('index', 'ToDoController@index');
+        Route::get('show', 'ToDoController@show');
         Route::post('store', 'ToDoController@store');
         Route::post('update', 'ToDoController@update');
         Route::post('complete', 'ToDoController@changeComplete');

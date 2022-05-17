@@ -48,10 +48,12 @@ class TaskModel extends Model
      * 条件获取列表
      * @param $where
      * @param array $field
+     * @param int $page
+     * @param int $pageSize
      * @param string $order
      * @return array
      */
-    public function getListByCondition($where, $field = ['*'], $page = 1, $pageSize = 10)
+    public function getListByCondition($where, $field = ['*'], $page = 1, $pageSize = 10, $order = 'id desc')
     {
         $offset = ($page - 1) * $pageSize;
         $limit = $pageSize;
@@ -66,9 +68,37 @@ class TaskModel extends Model
                 }
             })
             ->offset($offset)
+            ->orderByRaw($order)
             ->limit($limit)
             ->get()
             ->toArray();
+        return $result;
+    }
+
+    /**
+     * 条件获取信息
+     * @param $where
+     * @param array $field
+     * @return array
+     */
+    public function getInfoByCondition($where, $field = ['*'])
+    {
+        $result = [];
+        $info = self::query()
+            ->select($field)
+            ->when(isset($where['where']), function ($query) use($where){
+                return $query->where($where['where']);
+            })
+            ->when(isset($where['whereIn']), function ($query) use($where) {
+                foreach ($where['whereIn'] as $value) {
+                    return $query->whereIn($value[0], $value[1]);
+                }
+            })
+            ->first();
+        if (empty($info)) {
+            return $result;
+        }
+        $result = $info->toArray();
         return $result;
     }
 
