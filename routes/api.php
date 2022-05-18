@@ -30,7 +30,10 @@ Route::group([
         Route::post('me', 'AuthController@me');
     });
     //待办
-    Route::group(['prefix' => 'todo'], function ($router) {
+    Route::group([
+        'middleware' => 'auth.jwt',
+        'prefix' => 'todo'
+    ], function ($router) {
         Route::get('index', 'ToDoController@index');
         Route::get('show', 'ToDoController@show');
         Route::post('store', 'ToDoController@store');
