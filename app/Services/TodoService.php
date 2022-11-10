@@ -3,24 +3,30 @@
 namespace App\Services;
 
 use App\Models\TaskModel;
+use Illuminate\Support\Facades\Log;
 
 class TodoService
 {
     /**
      * 列表
-     * @param $where
-     * @param $field
-     * @param int $page
-     * @param int $pageSize
-     * @param string $order
+     * @param $paramList
      * @return array
      */
-    public function index($where, $field, $page = 1, $pageSize = 10, $order = 'id desc')
+    public function index($paramList)
     {
+        $field = ['id', 'task_name', 'is_complete', 'complete_time'];
+        $where = [];
+        $where['where'][] = ['user_id', '=', $paramList['user_id']];
+        if (isset($paramList['task_name']) && !empty($paramList['task_name'])) {
+            $where['where'][] = ['task_name', 'like', $paramList['task_name'] . '%'];
+        }
+        if (isset($paramList['is_complete']) && (in_array($paramList['is_complete'], [TaskModel::IS_COMPLETE_0, TaskModel::IS_COMPLETE_1]))) {
+            $where['where'][] = ['is_complete', '=', $paramList['is_complete']];
+        }
         $taskModel = new TaskModel();
         $where['where'][] = ['is_delete', '=', TaskModel::IS_DELETE_0];
         $count = $taskModel->getCountByCondition($where);
-        $list = $taskModel->getListByCondition($where, $field, $page, $pageSize, $order);
+        $list = $taskModel->getListByCondition($where, $field, $paramList['page'], $paramList['page_size']);
         if (!empty($list)) {
             array_walk($list, function($value, $key) use(&$list){
                 $list[$key]['complete_time'] = is_null($value['complete_time']) ? '' : $value['complete_time'];
@@ -41,7 +47,9 @@ class TodoService
     public function show($param)
     {
         $taskModel = new TaskModel();
+        $where = [];
         $where['where'][] = ['id', '=', $param['id']];
+        $where['where'][] = ['user_id', '=', $param['user_id']];
         $where['where'][] = ['is_delete', '=', TaskModel::IS_DELETE_0];
         $field = ['id', 'task_name', 'is_complete', 'complete_time'];
         $result = $taskModel->getInfoByCondition($where, $field);

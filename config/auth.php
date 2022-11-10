@@ -14,7 +14,7 @@ return [
     */
 
     'defaults' => [
-        'guard' => 'web',//默认web session
+        'guard' => 'api',//默认web session
         'passwords' => 'users',
     ],
 

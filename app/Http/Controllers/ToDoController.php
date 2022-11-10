@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Constants\StatusCode;
 use App\Models\TaskModel;
 use App\Services\TodoService;
 use Illuminate\Http\Request;
@@ -18,36 +19,55 @@ class ToDoController extends Controller
      */
     public function index(Request $request, TodoService $todoService)
     {
-        Log::info('todo列表-接收参数', ['params' => $request->all()]);
-        $result = [
-            'code' => 200,
-            'msg' => 'success',
-            'data' => []
-        ];
+        $params = $request->all();
+        Log::info('todo列表-接收参数', ['params' => $params]);
         try {
-            $where = [];
-            $where['where'][] = ['user_id', '=', $request->get('user_id')];
-            if ($request->has('task_name') && !empty($request->input('task_name'))) {
-                $where['where'][] = ['task_name', 'like', $request->input('task_name') . '%'];
+            //参数校验
+            $rules = [
+                'task_name' => 'filled',
+                'is_complete' => 'filled|integer',
+                'page' => 'filled|integer',
+                'page_size' => 'filled|integer',
+            ];
+            $messages = [
+                'filled' => ':attribute 参数不能为空',
+                'integer' => ':attribute 参数必须为整数',
+            ];
+            $customAttributes = [
+                'task_name' => '任务名称',
+                'is_complete' => '完成状态',
+                'page' => '分页',
+                'page_size' => '分页条数',
+            ];
+            $validator = Validator::make($params, $rules, $messages, $customAttributes);
+            if ($validator->fails()) {
+                $this->result['code'] = StatusCode::PRAM_ERROR;
+                $this->result['msg'] = $validator->errors()->first();
+                return doJsonResponse($this->result);
             }
-            if ($request->has('is_complete') && (in_array($request->input('is_complete'), [TaskModel::IS_COMPLETE_0, TaskModel::IS_COMPLETE_1]))) {
-                $where['where'][] = ['is_complete', '=', $request->input('is_complete')];
+            $paramList = $validator->validated();
+            $paramList['user_id'] = $request->get('user_id');
+            if (!isset($paramList['page'])) {
+                $paramList['page'] = self::DEFAULT_PAGE;
             }
-            $field = ['id', 'task_name', 'is_complete', 'complete_time'];
-            $page = $request->has('page') ? $request->input('page') : 1;
-            $pageSize = $request->has('page_size') ? $request->input('page_size') : 10;
-            Log::info('todo列表-过滤参数', ['params' => ['where' => $where, 'field' => $field, 'page' => $page, 'pageSize' => $pageSize]]);
-            $result['data'] = $todoService->index($where, $field, $page, $pageSize);
-            return response()->json($result);
+            if (!isset($paramList['page_size'])) {
+                $paramList['page_size'] = self::DEFAULT_PAGE_SIZE;
+            }
+            Log::info('todo列表-过滤后参数', ['params' => $paramList]);
+            $this->result['data'] = $todoService->index($paramList);
+            return doJsonResponse($this->result);
         } catch (\Exception $e) {
             $code = $e->getCode();
             $msg = $e->getMessage();
             Log::error('todo列表-service异常', [
-                'code' => $code, 'msg' => $msg, 'file' => $e->getFile(), 'line' => $e->getLine()
+                'code' => $code,
+                'msg' => $msg,
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
             ]);
-            $result['code'] = $code;
-            $result['msg'] = $msg;
-            return response()->json($result);
+            $this->result['code'] = $code;
+            $this->result['msg'] = $msg;
+            return doJsonResponse($this->result);
         }
     }
 
@@ -59,35 +79,43 @@ class ToDoController extends Controller
      */
     public function show(Request $request, TodoService $todoService)
     {
-        Log::info('todo详情-接收参数', ['params' => $request->all()]);
-        $result = [
-            'code' => 200,
-            'msg' => 'success',
-            'data' => []
-        ];
+        $params = $request->all();
+        Log::info('todo详情-接收参数', ['params' => $params]);
         try {
+            //参数校验
             $rules = [
-                'id' => 'required',
+                'id' => 'required|integer',
             ];
-            $validator = Validator::make($request->all(), $rules);
+            $messages = [
+                'required' => ':attribute 参数不能为空',
+                'integer' => ':attribute 参数必须为整数',
+            ];
+            $customAttributes = [
+                'id' => '任务ID',
+            ];
+            $validator = Validator::make($params, $rules, $messages, $customAttributes);
             if ($validator->fails()) {
-                $result['code'] = -1;
-                $result['msg'] = $validator->errors()->first();
-                return response()->json($result);
+                $this->result['code'] = StatusCode::PRAM_ERROR;
+                $this->result['msg'] = $validator->errors()->first();
+                return doJsonResponse($this->result);
             }
-            $param = $validator->validated();
-            $result['data'] = $todoService->show($param);
-            Log::info('todo详情-过滤参数', ['params' => $param]);
-            return response()->json($result);
+            $paramList = $validator->validated();
+            $paramList['user_id'] = $request->get('user_id');
+            Log::info('todo详情-过滤后参数', ['params' => $paramList]);
+            $this->result['data'] = $todoService->show($paramList);
+            return doJsonResponse($this->result);
         } catch (\Exception $e) {
             $code = $e->getCode();
             $msg = $e->getMessage();
             Log::error('todo详情-service异常', [
-                'code' => $code, 'msg' => $msg, 'file' => $e->getFile(), 'line' => $e->getLine()
+                'code' => $code,
+                'msg' => $msg,
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
             ]);
-            $result['code'] = $code;
-            $result['msg'] = $msg;
-            return response()->json($result);
+            $this->result['code'] = $code;
+            $this->result['msg'] = $msg;
+            return doJsonResponse($this->result);
         }
     }
 
@@ -99,37 +127,43 @@ class ToDoController extends Controller
      */
     public function store(Request $request, TodoService $todoService)
     {
-        Log::info('todo新增-接收参数', ['params' => $request->all()]);
-        $result = [
-            'code' => 200,
-            'msg' => 'success',
-            'data' => []
-        ];
+        $params = $request->all();
+        Log::info('todo新增-接收参数', ['params' => $params]);
         try {
+            //参数校验
             $rules = [
                 'task_name' => 'required',
             ];
-            $validator = Validator::make($request->all(), $rules);
+            $messages = [
+                'required' => ':attribute 参数不能为空',
+            ];
+            $customAttributes = [
+                'task_name' => '任务名称',
+            ];
+            $validator = Validator::make($params, $rules, $messages, $customAttributes);
             if ($validator->fails()) {
-                $result['code'] = -1;
-                $result['msg'] = $validator->errors()->first();
-                return response()->json($result);
+                $this->result['code'] = StatusCode::PRAM_ERROR;
+                $this->result['msg'] = $validator->errors()->first();
+                return doJsonResponse($this->result);
             }
-            $param = $validator->validated();
-            $param['user_id'] = $request->get('user_id');
-            Log::info('todo新增-过滤参数', ['params' => $param]);
-            $insertId = $todoService->store($param);
-            $result['data']['id'] = $insertId;
-            return response()->json($result);
+            $paramList = $validator->validated();
+            $paramList['user_id'] = $request->get('user_id');
+            Log::info('todo新增-过滤后参数', ['params' => $paramList]);
+            $insertId = $todoService->store($paramList);
+            $this->result['data']['id'] = $insertId;
+            return doJsonResponse($this->result);
         } catch (\Exception $e) {
             $code = $e->getCode();
             $msg = $e->getMessage();
             Log::error('todo新增-service异常', [
-                'code' => $code, 'msg' => $msg, 'file' => $e->getFile(), 'line' => $e->getLine()
+                'code' => $code,
+                'msg' => $msg,
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
             ]);
-            $result['code'] = $code;
-            $result['msg'] = $msg;
-            return response()->json($result);
+            $this->result['code'] = $code;
+            $this->result['msg'] = $msg;
+            return doJsonResponse($this->result);
         }
     }
 
@@ -141,36 +175,45 @@ class ToDoController extends Controller
      */
     public function update(Request $request, TodoService $todoService)
     {
-        Log::info('todo更新-接收参数', ['params' => $request->all()]);
-        $result = [
-            'code' => 200,
-            'msg' => 'success',
-            'data' => []
-        ];
+        $params = $request->all();
+        Log::info('todo更新-接收参数', ['params' => $params]);
         try {
+            //参数校验
             $rules = [
-                'id' => 'required',
+                'id' => 'required|integer',
                 'task_name' => 'required',
             ];
-            $validator = Validator::make($request->all(), $rules);
+            $messages = [
+                'required' => ':attribute 参数不能为空',
+                'integer' => ':attribute 参数必须为整数',
+            ];
+            $customAttributes = [
+                'id' => '任务ID',
+                'task_name' => '任务名称',
+            ];
+            $validator = Validator::make($params, $rules, $messages, $customAttributes);
             if ($validator->fails()) {
-                $result['code'] = -1;
-                $result['msg'] = $validator->errors()->first();
-                return response()->json($result);
+                $this->result['code'] = StatusCode::PRAM_ERROR;
+                $this->result['msg'] = $validator->errors()->first();
+                return doJsonResponse($this->result);
             }
-            $param = $validator->validated();
-            Log::info('todo更新-过滤参数', ['params' => $param]);
-            $todoService->update($param);
-            return response()->json($result);
+            $paramList = $validator->validated();
+            $paramList['user_id'] = $request->get('user_id');
+            Log::info('todo更新-过滤后参数', ['params' => $paramList]);
+            $todoService->update($paramList);
+            return doJsonResponse($this->result);
         } catch (\Exception $e) {
             $code = $e->getCode();
             $msg = $e->getMessage();
             Log::error('todo更新-service异常', [
-                'code' => $code, 'msg' => $msg, 'file' => $e->getFile(), 'line' => $e->getLine()
+                'code' => $code,
+                'msg' => $msg,
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
             ]);
-            $result['code'] = $code;
-            $result['msg'] = $msg;
-            return response()->json($result);
+            $this->result['code'] = $code;
+            $this->result['msg'] = $msg;
+            return doJsonResponse($this->result);
         }
     }
 
@@ -182,41 +225,50 @@ class ToDoController extends Controller
      */
     public function changeComplete(Request $request, TodoService $todoService)
     {
-        Log::info('todo完成标记-接收参数', ['params' => $request->all()]);
-        $result = [
-            'code' => 200,
-            'msg' => 'success',
-            'data' => []
-        ];
+        $params = $request->all();
+        Log::info('todo完成标记-接收参数', ['params' => $params]);
         try {
+            //参数校验
             $rules = [
-                'id' => 'required',
+                'id' => 'required|integer',
                 'is_complete' => 'required',
             ];
-            $validator = Validator::make($request->all(), $rules);
+            $messages = [
+                'required' => ':attribute 参数不能为空',
+                'integer' => ':attribute 参数必须为整数',
+            ];
+            $customAttributes = [
+                'id' => '任务ID',
+                'is_complete' => '完成状态',
+            ];
+            $validator = Validator::make($params, $rules, $messages, $customAttributes);
             if ($validator->fails()) {
-                $result['code'] = -1;
-                $result['msg'] = $validator->errors()->first();
-                return response()->json($result);
+                $this->result['code'] = StatusCode::PRAM_ERROR;
+                $this->result['msg'] = $validator->errors()->first();
+                return doJsonResponse($this->result);
             }
-            $param = $validator->validated();
-            if (!in_array($param['is_complete'], [TaskModel::IS_COMPLETE_0,TaskModel::IS_COMPLETE_1])) {
-                $result['code'] = -1;
-                $result['msg'] = 'is_complete参数错误';
-                return response()->json($result);
+            $paramList = $validator->validated();
+            $paramList['user_id'] = $request->get('user_id');
+            if (!in_array($paramList['is_complete'], [TaskModel::IS_COMPLETE_0,TaskModel::IS_COMPLETE_1])) {
+                $this->result['code'] = StatusCode::PRAM_ERROR;
+                $this->result['msg'] = 'is_complete参数错误';
+                return doJsonResponse($this->result);
             }
-            Log::info('todo完成标记-过滤参数', ['params' => $param]);
-            $todoService->changeComplete($param);
-            return response()->json($result);
+            Log::info('todo完成标记-过滤后参数', ['params' => $paramList]);
+            $todoService->changeComplete($paramList);
+            return doJsonResponse($this->result);
         } catch (\Exception $e) {
             $code = $e->getCode();
             $msg = $e->getMessage();
             Log::error('todo完成标记-service异常', [
-                'code' => $code, 'msg' => $msg, 'file' => $e->getFile(), 'line' => $e->getLine()
+                'code' => $code,
+                'msg' => $msg,
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
             ]);
-            $result['code'] = $code;
-            $result['msg'] = $msg;
-            return response()->json($result);
+            $this->result['code'] = $code;
+            $this->result['msg'] = $msg;
+            return doJsonResponse($this->result);
         }
     }
 
@@ -228,35 +280,43 @@ class ToDoController extends Controller
      */
     public function delete(Request $request, TodoService $todoService)
     {
+        $param = $request->all();
         Log::info('todo删除-接收参数', ['params' => $request->all()]);
-        $result = [
-            'code' => 200,
-            'msg' => 'success',
-            'data' => []
-        ];
         try {
+            //参数校验
             $rules = [
-                'id' => 'required',
+                'id' => 'required|integer',
             ];
-            $validator = Validator::make($request->all(), $rules);
+            $messages = [
+                'required' => ':attribute 参数不能为空',
+                'integer' => ':attribute 参数必须为整数',
+            ];
+            $customAttributes = [
+                'id' => '任务ID',
+            ];
+            $validator = Validator::make($param, $rules, $messages, $customAttributes);
             if ($validator->fails()) {
-                $result['code'] = -1;
-                $result['msg'] = $validator->errors()->first();
-                return response()->json($result);
+                $this->result['code'] = StatusCode::PRAM_ERROR;
+                $this->result['msg'] = $validator->errors()->first();
+                return doJsonResponse($this->result);
             }
-            $param = $validator->validated();
-            Log::info('todo删除-过滤参数', ['params' => $param]);
-            $todoService->delete($param);
-            return response()->json($result);
+            $paramList = $validator->validated();
+            $paramList['user_id'] = $request->get('user_id');
+            Log::info('todo删除-过滤参数', ['params' => $paramList]);
+            $todoService->delete($paramList);
+            return doJsonResponse($this->result);
         } catch (\Exception $e) {
             $code = $e->getCode();
             $msg = $e->getMessage();
             Log::error('todo删除-service异常', [
-                'code' => $code, 'msg' => $msg, 'file' => $e->getFile(), 'line' => $e->getLine()
+                'code' => $code,
+                'msg' => $msg,
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
             ]);
-            $result['code'] = $code;
-            $result['msg'] = $msg;
-            return response()->json($result);
+            $this->result['code'] = $code;
+            $this->result['msg'] = $msg;
+            return doJsonResponse($this->result);
         }
     }
 

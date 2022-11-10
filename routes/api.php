@@ -24,10 +24,10 @@ Route::group([
 ], function ($router) {
     //auth
     Route::group(['prefix' => 'auth'], function ($router) {
-        Route::post('login', 'AuthController@login');
-        Route::post('logout', 'AuthController@logout');
-        Route::post('refresh', 'AuthController@refresh');
-        Route::post('me', 'AuthController@me');
+        Route::post('login', 'JwtAuthController@login');
+        Route::post('logout', 'JwtAuthController@logout');
+        Route::post('refresh', 'JwtAuthController@refresh');
+        Route::post('me', 'JwtAuthController@me');
     });
     //待办
     Route::group([
@@ -43,6 +43,7 @@ Route::group([
     });
     //other
     Route::group(['prefix' => 'other'], function ($router) {
-        Route::get('get_cookie', 'OtherController@getCookie');
+        Route::get('get_cookie', 'OtherController@getCookie');//获取cookie
+        Route::get('test_package', 'TestPackageController@testPackage');//测试composer包
     });
 });
